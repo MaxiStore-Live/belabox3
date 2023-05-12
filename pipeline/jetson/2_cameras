@@ -1,0 +1,12 @@
+v4l2src device=/dev/video0 ! nvvidconv ! queue ! comp.sink_0
+v4l2src device=/dev/video1 ! video/x-raw, width=800, height=448, framerate=30/1, format=YUY2 !
+videobox left=-4 right=-4 top=-4 bottom=-4 ! nvvidconv ! queue ! comp.sink_1
+
+nvcompositor name=comp sink_0::width=1920 sink_0::height=1080 sink_1::width=640 sink_1::height=360 sink_1::xpos=10 sink_1::ypos=10 !
+queue ! identity name=v_delay signal-handoffs=TRUE ! nvvidconv interpolation-method=5 !
+nvv4l2h265enc control-rate=1 qp-range="28,50:0,38:0,50" iframeinterval=60 preset-level=4 maxperf-enable=true EnableTwopassCBR=true insert-sps-pps=true name=venc_bps !
+h265parse config-interval=-1 ! queue max-size-time=10000000000 max-size-buffers=1000 max-size-bytes=41943040 !
+mpegtsmux name=mux ! appsink name=appsink
+
+alsasrc device=hw:2 ! identity name=a_delay signal-handoffs=TRUE ! volume volume=1.0 !
+audioconvert ! avenc_aac bitrate=131072 ! aacparse ! queue ! mux.
